@@ -1,0 +1,142 @@
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: kpng
+  namespace: default
+  labels:
+    app: kpng
+    app.kubernetes.io/component: kpng
+    app.kubernetes.io/part-of: l-3-4-gateway-api-poc
+    app.kubernetes.io/version: {{.Values.version}}
+spec:
+  selector:
+    matchLabels:
+      app: kpng
+  template:
+    metadata:
+      labels:
+        app: kpng
+        app.kubernetes.io/component: kpng
+        app.kubernetes.io/part-of: l-3-4-gateway-api-poc
+        app.kubernetes.io/version: {{.Values.version}}
+    spec:
+      serviceAccountName: kpng
+      tolerations:
+      - operator: "Exists"
+        effect: "NoSchedule"
+      containers:
+      - name: kpng
+        image: localhost:5000/kubernetes/kpng:latest
+        imagePullPolicy: Always
+        args: 
+        - "kube"
+        - "to-api"
+        - "--exportMetrics=0.0.0.0:9099"
+        - "--service-proxy-name=kpng-example"
+        - "--v=2"
+        env:
+        - name: GOLANG_PROTOBUF_REGISTRATION_CONFLICT
+          value: warn
+        ports:
+        - containerPort: 9099
+          protocol: TCP
+        volumeMounts:
+        - name: empty
+          mountPath: /k8s
+        - mountPath: /var/lib/kpng
+          name: kpng-config
+      - name: kpng-ipvs
+        image: localhost:5000/kubernetes/kpng:latest
+        imagePullPolicy: Always
+        args: 
+        - "local"
+        - "to-ipvs"
+        - "--exportMetrics=0.0.0.0:9098"
+        - "--v=2"
+        - "--masquerade-all"
+        env:
+        - name: GOLANG_PROTOBUF_REGISTRATION_CONFLICT
+          value: warn
+        ports:
+        - containerPort: 9098
+          protocol: TCP
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - name: empty
+          mountPath: /k8s
+        - name: modules
+          mountPath: /lib/modules
+          readOnly: true
+      - name: router
+        image: {{ .Values.registry }}/{{ .Values.repository }}/router:{{.Values.version}}
+        imagePullPolicy: Always
+        command:
+        - ./router
+        args:
+        - run
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - mountPath: /tmp
+          name: tmp
+        - mountPath: /var/run/bird
+          name: run
+        - mountPath: /etc/bird
+          name: etc
+        - mountPath: /var/log
+          name: log
+        ports:
+        - name: probes
+          containerPort: 8082
+        startupProbe:
+          httpGet:
+            path: /readyz
+            port: probes
+          failureThreshold: 100
+          periodSeconds: 3
+          timeoutSeconds: 2
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: probes
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: probes
+          periodSeconds: 10
+          timeoutSeconds: 2
+        resources:
+          limits:
+            cpu: 300m
+            memory: 30Mi
+            ephemeral-storage: 1024Mi
+          requests:
+            cpu: 100m
+            memory: 20Mi
+            ephemeral-storage: 512Mi
+      volumes:
+      volumes:
+      - name: empty
+        emptyDir: {}
+      - name: modules
+        hostPath:
+          path: /lib/modules
+      - name: kpng-config
+        configMap:
+          name: kpng
+      - emptyDir:
+          medium: Memory
+        name: tmp
+      - emptyDir:
+          medium: Memory
+        name: run
+      - emptyDir:
+          medium: Memory
+        name: etc
+      - emptyDir:
+          medium: Memory
+        name: log

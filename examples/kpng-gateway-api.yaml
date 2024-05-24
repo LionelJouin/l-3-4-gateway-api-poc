@@ -1,0 +1,100 @@
+---
+apiVersion: "k8s.cni.cncf.io/v1"
+kind: NetworkAttachmentDefinition
+metadata:
+  name: macvlan-nad
+spec:
+  config: '{
+        "cniVersion":"0.4.0",
+        "type":"macvlan",
+        "master":"eth0",
+        "mode":"bridge",
+        "ipam":{
+            "log_file":"/tmp/whereabouts.log",
+            "type":"whereabouts",
+            "ipRanges":[
+                {
+                    "range":"169.255.100.0/24"
+                }
+            ]
+        }
+    }'
+---
+apiVersion: "k8s.cni.cncf.io/v1"
+kind: NetworkAttachmentDefinition
+metadata:
+  name: vlan-100
+spec:
+  config: '{
+        "cniVersion":"0.4.0",
+        "type":"vlan",
+        "name":"vlan-100",
+        "master": "eth0",
+        "vlanId": 100,
+        "linkInContainer": false,
+        "ipam":{
+            "log_file":"/tmp/whereabouts.log",
+            "type":"whereabouts",
+            "ipRanges":[
+                {
+                    "range":"169.254.100.0/24",
+                    "exclude":[
+                        "169.254.100.150/32"
+                    ]
+                }
+            ]
+        }
+    }'
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: Gateway
+metadata:
+  name: my-kpng-gateway
+spec:
+  gatewayClassName: l-3-4-gateway-api-poc/kpng
+  listeners:
+  - name: all # This is ignored as KPNG does not undertand these
+    port: 4000
+    protocol: TCP
+  infrastructure:
+    annotations: 
+      k8s.v1.cni.cncf.io/networks: '[{"name":"vlan-100","interface":"vlan-100"},{"name":"macvlan-nad","interface":"net1"}]'
+---
+apiVersion: l34.gateway.api.poc/v1alpha1
+kind: GatewayRouter
+metadata:
+  name: gateway-v4
+  labels:
+    service.kubernetes.io/service-proxy-name: my-kpng-gateway
+spec:
+  address: 169.254.100.150
+  interface: vlan-100
+  bgp:
+    localASN: 8103
+    remoteASN: 4248829953
+    holdTime: 24s
+    localPort: 10179
+    remotePort: 10179
+    bfd:
+      switch: true
+      minTx: 300ms
+      minRx: 300ms
+      multiplier: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: service-a
+  labels:
+    service.kubernetes.io/service-proxy-name: my-kpng-gateway
+spec:
+  type: LoadBalancer
+  externalIPs: 
+  - 20.0.0.1
+  selector:
+    app: example-target-application-a
+    l-3-4-gateway-api-poc/dummy-service-selector: "true"
+  ports:
+  - protocol: TCP
+    port: 4000
+    targetPort: 4000

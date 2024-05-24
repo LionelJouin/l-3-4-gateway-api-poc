@@ -1,0 +1,157 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kpng-controller-manager
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kpng-controller-manager
+rules:
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  - daemonsets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - gateway.networking.k8s.io
+  resources:
+  - gateways
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - gateway.networking.k8s.io
+  resources:
+  - gateways/status
+  verbs:
+  - patch
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - services
+  - pods
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - "discovery.k8s.io"
+  resources:
+  - endpointslices
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kpng-controller-manager
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kpng-controller-manager
+subjects:
+- kind: ServiceAccount
+  name: kpng-controller-manager
+  namespace: default
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: templates-configmap
+data:
+  kpng.yaml: |
+{{ tpl (.Files.Get "gateway-templates/kpng.yaml") . | indent 4}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kpng-controller-manager
+  labels:
+    app: kpng-controller-manager
+    app.kubernetes.io/part-of: l-3-4-gateway-api-poc
+    app.kubernetes.io/version: {{.Values.version}}
+spec:
+  selector:
+    matchLabels:
+      app: kpng-controller-manager
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: kpng-controller-manager
+        app.kubernetes.io/part-of: l-3-4-gateway-api-poc
+        app.kubernetes.io/version: {{.Values.version}}
+    spec:
+      serviceAccountName: kpng-controller-manager
+      containers:
+      - name: kpng-controller-manager
+        image: {{ .Values.registry }}/{{ .Values.repository }}/kpng-controller-manager:{{.Values.version}}
+        imagePullPolicy: Always
+        command:
+        - "./kpng-controller-manager"
+        args:
+        - "run"
+        - "--gateway-class-name=l-3-4-gateway-api-poc/kpng"
+        env:
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        volumeMounts:
+        - name: templates
+          mountPath: /templates
+        securityContext:
+          privileged: true
+        ports:
+        - name: probes
+          containerPort: 8081
+        startupProbe:
+          httpGet:
+            path: /readyz
+            port: probes
+          failureThreshold: 100
+          periodSeconds: 3
+          timeoutSeconds: 2
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: probes
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: probes
+          periodSeconds: 10
+          timeoutSeconds: 2
+        resources:
+          limits:
+            cpu: 300m
+            memory: 30Mi
+            ephemeral-storage: 1024Mi
+          requests:
+            cpu: 100m
+            memory: 20Mi
+            ephemeral-storage: 512Mi
+      volumes:
+      - name: templates
+        configMap:
+          name: templates-configmap

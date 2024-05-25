@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
         - name: example-target
-          image: {{ .Values.registry }}/{{ .Values.repository }}/{{ .Values.image }}:{{ .Values.version }}
+          image: {{ .Values.registry }}/{{ .Values.image }}:{{ .Values.version }}
           imagePullPolicy: {{ .Values.pullPolicy }}
           command:
             - /bin/bash

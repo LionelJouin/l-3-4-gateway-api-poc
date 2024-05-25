@@ -13,7 +13,7 @@ help: ## Display this help.
 # Variables
 ############################################################################
 
-IMAGES ?= kpng-controller-manager router example-target-application
+IMAGES ?= kpng-controller-manager router example-target-application vpn-gateway cni-plugins
 VERSION ?= latest
 
 # E2E tests
@@ -26,8 +26,7 @@ UNIT_TEST_DOCKER_PARAMS ?= -it
 UNIT_TEST_K8S_VERSION ?= 1.28.0
 
 # Contrainer Registry
-REGISTRY ?= localhost:5000/l-3-4-gateway-api-poc
-BASE_IMAGE ?= $(REGISTRY)/base-image:$(VERSION)
+REGISTRY ?= ghcr.io/lioneljouin/l-3-4-gateway-api-poc
 
 # Tools
 export PATH := $(shell pwd)/bin:$(PATH)
@@ -56,7 +55,6 @@ build:
 	$(BUILD_ARGS) \
 	-t $(BUILD_REGISTRY)$(IMAGE):$(VERSION) \
 	--build-arg BUILD_VERSION=$(shell git describe --dirty --tags) \
-	--build-arg BASE_IMAGE=$(BASE_IMAGE) \
 	-f ./$(BUILD_DIR)/$(IMAGE)/Dockerfile .
 .PHONY: tag
 tag:
@@ -80,6 +78,14 @@ router: ## Build the router.
 .PHONY: example-target-application
 example-target-application: ## Build the example target application.
 	BUILD_DIR=examples/target-application/build IMAGE=target-application $(MAKE) $(BUILD_STEPS)
+
+.PHONY: vpn-gateway
+vpn-gateway: ## Build the vpn-gateway.
+	BUILD_DIR=hack IMAGE=vpn-gateway $(MAKE) $(BUILD_STEPS)
+
+.PHONY: cni-plugins
+cni-plugins: ## Build the cni-plugins.
+	IMAGE=cni-plugins $(MAKE) $(BUILD_STEPS)
 
 #############################################################################
 ##@ Testing & Code check

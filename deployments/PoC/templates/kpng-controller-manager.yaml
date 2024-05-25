@@ -103,7 +103,7 @@ spec:
       serviceAccountName: kpng-controller-manager
       containers:
       - name: kpng-controller-manager
-        image: {{ .Values.registry }}/{{ .Values.repository }}/kpng-controller-manager:{{.Values.version}}
+        image: {{ .Values.registry }}/kpng-controller-manager:{{.Values.version}}
         imagePullPolicy: Always
         command:
         - "./kpng-controller-manager"

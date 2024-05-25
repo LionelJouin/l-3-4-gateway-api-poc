@@ -1,1 +1,4 @@
 ---
+
+registry: ghcr.io/lioneljouin/l-3-4-gateway-api-poc
+version: latest

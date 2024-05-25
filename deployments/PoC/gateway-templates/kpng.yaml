@@ -27,7 +27,7 @@ spec:
         effect: "NoSchedule"
       containers:
       - name: kpng
-        image: localhost:5000/kubernetes/kpng:latest
+        image: ghcr.io/lioneljouin/l-3-4-gateway-api-poc/kpng:latest
         imagePullPolicy: Always
         args: 
         - "kube"
@@ -47,7 +47,7 @@ spec:
         - mountPath: /var/lib/kpng
           name: kpng-config
       - name: kpng-ipvs
-        image: localhost:5000/kubernetes/kpng:latest
+        image: ghcr.io/lioneljouin/l-3-4-gateway-api-poc/kpng:latest
         imagePullPolicy: Always
         args: 
         - "local"
@@ -70,7 +70,7 @@ spec:
           mountPath: /lib/modules
           readOnly: true
       - name: router
-        image: {{ .Values.registry }}/{{ .Values.repository }}/router:{{.Values.version}}
+        image: {{ .Values.registry }}/router:{{.Values.version}}
         imagePullPolicy: Always
         command:
         - ./router

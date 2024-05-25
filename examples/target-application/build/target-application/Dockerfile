@@ -1,7 +1,7 @@
-FROM ubuntu:22.04
+FROM ubuntu:24.04
 
 RUN apt-get update -y \
-  && apt-get install -y iproute2 tcpdump net-tools iputils-ping netcat wget screen xz-utils strace nftables ipvsadm iptables bird2 ethtool conntrack dnsutils jq iperf iperf3
+  && apt-get install -y iproute2 tcpdump net-tools iputils-ping netcat-traditional wget screen xz-utils strace nftables ipvsadm iptables bird2 ethtool conntrack dnsutils jq iperf iperf3
 
 ADD https://github.com/Nordix/ctraffic/releases/download/v1.7.0/ctraffic.gz ctraffic.gz
 RUN gunzip ctraffic.gz \

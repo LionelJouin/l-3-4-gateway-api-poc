@@ -1,7 +1,6 @@
 ---
 
-registry: localhost:5000
-repository: l-3-4-gateway-api-poc
+registry: ghcr.io/lioneljouin/l-3-4-gateway-api-poc
 tag: latest
 pullPolicy: IfNotPresent
 

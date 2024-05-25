@@ -198,7 +198,7 @@ spec:
                   fieldPath: spec.nodeName
       initContainers:
         - name: install-cni-plugins
-          image: localhost:5000/meridio-io/cni-plugins:latest
+          image: {{ .Values.registry }}/cni-plugins:{{.Values.version}}
           securityContext:
             privileged: true
           volumeMounts:

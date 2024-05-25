@@ -58,7 +58,8 @@ spec:
     protocol: TCP
   infrastructure:
     annotations: 
-      k8s.v1.cni.cncf.io/networks: '[{"name":"vlan-100","interface":"vlan-100"},{"name":"macvlan-nad","interface":"net1"}]'
+      k8s.v1.cni.cncf.io/networks: '[{"name":"vlan-100","interface":"vlan-100"},{"name":"macvlan-nad","interface":"net1"}]' # Networks attached to the gateway workloads
+      l-3-4-gateway-api-poc/networks: '[{"name":"macvlan-nad","interface":"net1"}]' # Networks towards the service selected pods
 ---
 apiVersion: l34.gateway.api.poc/v1alpha1
 kind: GatewayRouter

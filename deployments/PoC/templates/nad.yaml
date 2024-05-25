@@ -1,0 +1,22 @@
+---
+apiVersion: "k8s.cni.cncf.io/v1"
+kind: NetworkAttachmentDefinition
+metadata:
+  name: policy-route
+  namespace: default
+spec:
+  config: '{
+        "cniVersion":"1.0.0",
+        "type":"policy-route"
+    }'
+---
+apiVersion: "k8s.cni.cncf.io/v1"
+kind: NetworkAttachmentDefinition
+metadata:
+  name: vip
+  namespace: default
+spec:
+  config: '{
+        "cniVersion":"1.0.0",
+        "type":"loopback-vip"
+    }'

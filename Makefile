@@ -13,7 +13,7 @@ help: ## Display this help.
 # Variables
 ############################################################################
 
-IMAGES ?= kpng-controller-manager router example-target-application vpn-gateway cni-plugins
+IMAGES ?= kpng-controller-manager router example-target-application vpn-gateway cni-plugins stateless-load-balancer stateless-load-balancer-controller-manager unit-test
 VERSION ?= latest
 
 # E2E tests
@@ -87,6 +87,18 @@ vpn-gateway: ## Build the vpn-gateway.
 cni-plugins: ## Build the cni-plugins.
 	IMAGE=cni-plugins $(MAKE) $(BUILD_STEPS)
 
+.PHONY: stateless-load-balancer
+stateless-load-balancer: ## Build the stateless-load-balancer.
+	IMAGE=stateless-load-balancer $(MAKE) $(BUILD_STEPS)
+
+.PHONY: stateless-load-balancer-controller-manager
+stateless-load-balancer-controller-manager: ## Build the stateless-load-balancer-controller-manager.
+	IMAGE=stateless-load-balancer-controller-manager $(MAKE) $(BUILD_STEPS)
+
+.PHONY: unit-test
+unit-test: 
+	IMAGE=unit-test BUILD_DIR=./hack $(MAKE) -s $(BUILD_STEPS)
+
 #############################################################################
 ##@ Testing & Code check
 #############################################################################
@@ -115,7 +127,12 @@ e2e: ginkgo output-dir ## Run the E2E tests.
 
 .PHONY: test
 test: output-dir envtest setup-test ## Run the Unit tests (read coverage report: go tool cover -html=_output/cover_unit_test.out -o _output/cover_unit_test.html).
-	go test -p 1 -race -cover -short -count=1 -coverprofile $(OUTPUT_DIR)/cover_unit_test.out ./...
+	docker run \
+	--privileged \
+	$(UNIT_TEST_DOCKER_PARAMS) \
+	-v ./:/l-3-4-gateway-api-poc \
+	--rm -i $(REGISTRY)/unit-test:$(VERSION) \
+	sh -c "cd /l-3-4-gateway-api-poc && go test -p 1 -race -cover -short -count=1 -coverprofile $(OUTPUT_DIR)/cover_unit_test.out ./..."
 
 .PHONY: setup-test
 setup-test:

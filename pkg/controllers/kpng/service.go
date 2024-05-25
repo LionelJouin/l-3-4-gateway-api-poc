@@ -28,18 +28,18 @@ import (
 	gatewayapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
-// reconcileEndpointSlices reconciles all services managed by the gateway
+// reconcileServices reconciles all services managed by the gateway.
 func (c *Controller) reconcileServices(ctx context.Context, gateway *gatewayapiv1.Gateway) error {
 	networks := networkattachment.GetNetworksFromGateway(gateway)
 
 	services := &v1.ServiceList{}
 
 	// Get pods for this service so the endpointslices can be reconciled.
-	var matchingLabels client.MatchingLabels = client.MatchingLabels{
+	matchingLabels := client.MatchingLabels{
 		apis.LabelServiceProxyName: gateway.Name,
 	}
 
-	err := c.List(ctx, services, matchingLabels)
+	err := c.List(ctx, services, matchingLabels) // todo: filter namespace
 	if err != nil {
 		return fmt.Errorf("failed to list services: %w", err)
 	}
@@ -47,7 +47,9 @@ func (c *Controller) reconcileServices(ctx context.Context, gateway *gatewayapiv
 	serviceIPs := []string{}
 
 	for _, service := range services.Items {
-		err = c.reconcileService(ctx, &service, networks)
+		s := service
+
+		err = c.reconcileService(ctx, &s, networks)
 		if err != nil {
 			return err
 		}
@@ -75,7 +77,7 @@ func (c *Controller) reconcileServices(ctx context.Context, gateway *gatewayapiv
 	return nil
 }
 
-// reconcileEndpointSlices reconciles a specific service.
+// reconcileService reconciles a specific service.
 func (c *Controller) reconcileService(ctx context.Context, service *v1.Service, networks []*v1alpha1.Network) error {
 	// Get pods for this service so the endpointslices can be reconciled.
 	var matchingLabels client.MatchingLabels = service.Spec.Selector
@@ -86,7 +88,9 @@ func (c *Controller) reconcileService(ctx context.Context, service *v1.Service, 
 
 	err := c.List(ctx,
 		pods,
-		matchingLabels)
+		matchingLabels,
+		client.InNamespace(service.GetNamespace()),
+	)
 	if err != nil {
 		return fmt.Errorf("failed to list the pods: %w", err)
 	}

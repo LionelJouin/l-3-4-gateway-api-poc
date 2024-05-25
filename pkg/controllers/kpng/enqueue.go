@@ -30,13 +30,15 @@ import (
 )
 
 func serviceEnqueue(
-	ctx context.Context,
+	_ context.Context,
 	object client.Object,
 ) []reconcile.Request {
 	gatewayName, exists := object.GetLabels()[apis.LabelServiceProxyName]
 	if !exists {
 		return []reconcile.Request{}
 	}
+
+	// todo: check if parent is the right class
 
 	return []reconcile.Request{
 		{
@@ -96,7 +98,7 @@ func (c *Controller) getServicesForGateways(ctx context.Context, gateways []gate
 			serviceList,
 			client.MatchingLabels{
 				apis.LabelServiceProxyName: gateway.Name,
-			})
+			}) // todo: filter namespace
 		if err != nil {
 			log.FromContextOrGlobal(ctx).Error(err, "failed listing the services during the pod enqueue")
 		}
@@ -116,9 +118,10 @@ func (c *Controller) getGatewaysForGatewayClass(ctx context.Context) []gatewayap
 	// 		"spec.gatewayClassName": c.GatewayClassName,
 	// 	})
 	err := c.List(ctx,
-		gatewayList)
+		gatewayList) // todo: filter namespace
 	if err != nil {
 		log.FromContextOrGlobal(ctx).Error(err, "failed listing the gateways during the pod enqueue")
+
 		return nil
 	}
 

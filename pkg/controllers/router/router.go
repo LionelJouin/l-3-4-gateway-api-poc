@@ -39,7 +39,7 @@ type RoutingSuite interface {
 	Configure(ctx context.Context, vips []string, gateways []bird.Gateway) error
 }
 
-// Controller reconciles the Gateway Object to run KPNG.
+// Controller reconciles the Gateway Object to run a router.
 type Controller struct {
 	client.Client
 	Scheme *runtime.Scheme
@@ -50,9 +50,9 @@ type Controller struct {
 	RoutingSuiteInstance RoutingSuite
 }
 
-// Reconcile implements the reconciliation of the Gateway of KPNG class.
+// Reconcile implements the reconciliation of the Gateway of the router.
 // This function is trigger by any change (create/update/delete) in any resource related
-// to the object (Flow/Service/Gateway).
+// to the object (GatewayRouter/Gateway).
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.13.0/pkg/reconcile
@@ -132,13 +132,14 @@ func (c *Controller) getGatewayRouters(ctx context.Context) ([]bird.Gateway, err
 		gatewayList,
 		client.MatchingLabels{
 			apis.LabelServiceProxyName: c.Name,
-		})
+		}) // todo: filter namespace
 	if err != nil {
 		return nil, fmt.Errorf("failed listing the flows: %w", err)
 	}
 
 	for _, gateway := range gatewayList.Items {
-		gateways = append(gateways, newGateway(&gateway))
+		g := gateway
+		gateways = append(gateways, newGateway(&g))
 	}
 
 	return gateways, nil

@@ -50,6 +50,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(SchemeGroupVersion,
 		&GatewayRouter{},
 		&GatewayRouterList{},
+		&L34Route{},
+		&L34RouteList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 

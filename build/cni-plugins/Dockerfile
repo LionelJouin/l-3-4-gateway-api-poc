@@ -1,3 +1,19 @@
+FROM golang:1.22 as build
+
+ENV GO111MODULE=on
+
+WORKDIR /app
+
+COPY go.mod .
+COPY go.sum .
+
+RUN go mod download
+
+COPY . .
+
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags "-extldflags -static" -o loopback-vip ./cmd/cni/loopback-vip \
+  && CGO_ENABLED=0 GOOS=linux go build -ldflags "-extldflags -static" -o policy-route ./cmd/cni/policy-route
+
 FROM golang:1.22 as cni-plugin-build
 
 WORKDIR /app
@@ -15,6 +31,8 @@ FROM alpine
 
 WORKDIR /app
 
+COPY --from=build /app/loopback-vip .
+COPY --from=build /app/policy-route .
 COPY --from=cni-plugin-build /app/plugins/bin/* .
 
 CMD ["cp", "-a", "./", "/host/opt/cni/bin/"]

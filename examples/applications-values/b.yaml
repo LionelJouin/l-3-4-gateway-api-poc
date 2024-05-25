@@ -1,0 +1,3 @@
+---
+
+networks: '[{"name": "macvlan-nad-2","interface": "net2"}]'

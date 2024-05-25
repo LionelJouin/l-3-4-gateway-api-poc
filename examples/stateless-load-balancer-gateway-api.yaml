@@ -1,0 +1,117 @@
+---
+apiVersion: "k8s.cni.cncf.io/v1"
+kind: NetworkAttachmentDefinition
+metadata:
+  name: macvlan-nad-2
+spec:
+  config: '{
+        "cniVersion":"0.4.0",
+        "type":"macvlan",
+        "master":"eth0",
+        "mode":"bridge",
+        "ipam":{
+            "log_file":"/tmp/whereabouts.log",
+            "type":"whereabouts",
+            "ipRanges":[
+                {
+                    "range":"169.222.100.0/24"
+                }
+            ]
+        }
+    }'
+---
+apiVersion: "k8s.cni.cncf.io/v1"
+kind: NetworkAttachmentDefinition
+metadata:
+  name: vlan-200
+spec:
+  config: '{
+        "cniVersion":"0.4.0",
+        "type":"vlan",
+        "name":"vlan-200",
+        "master": "eth0",
+        "vlanId": 200,
+        "linkInContainer": false,
+        "ipam":{
+            "log_file":"/tmp/whereabouts.log",
+            "type":"whereabouts",
+            "ipRanges":[
+                {
+                    "range":"169.254.100.0/24",
+                    "exclude":[
+                        "169.254.100.150/32"
+                    ]
+                }
+            ]
+        }
+    }'
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: Gateway
+metadata:
+  name: my-stateless-lb-gateway
+spec:
+  gatewayClassName: l-3-4-gateway-api-poc/stateless-load-balancer
+  listeners:
+  - name: all # This is ignored as KPNG does not undertand these
+    port: 4000
+    protocol: TCP
+  infrastructure:
+    annotations: 
+      k8s.v1.cni.cncf.io/networks: '[{"name":"vlan-200","interface":"vlan-200"},{"name":"macvlan-nad-2","interface":"net2"}]' # Networks attached to the gateway workloads
+      l-3-4-gateway-api-poc/networks: '[{"name":"macvlan-nad-2","interface":"net2"}]' # Networks towards the service selected pods
+---
+apiVersion: l34.gateway.api.poc/v1alpha1
+kind: GatewayRouter
+metadata:
+  name: gateway-b-v4
+  labels:
+    service.kubernetes.io/service-proxy-name: my-stateless-lb-gateway
+spec:
+  address: 169.254.100.150
+  interface: vlan-200
+  bgp:
+    localASN: 8103
+    remoteASN: 4248829953
+    holdTime: 24s
+    localPort: 10179
+    remotePort: 10179
+    bfd:
+      switch: true
+      minTx: 300ms
+      minRx: 300ms
+      multiplier: 5
+---
+apiVersion: l34.gateway.api.poc/v1alpha1
+kind: L34Route
+metadata:
+  name: vip-20-0-0-1-port-4000
+spec:
+  parentRefs:
+  - name: my-stateless-lb-gateway
+  backendRefs:
+  - name: service-b
+    port: 4000 # This is ignored
+  priority: 1
+  destinationCIDRs:
+  - 20.0.0.1/32
+  sourceCIDRs:
+  - 0.0.0.0/0
+  sourcePorts:
+  - 0-65535
+  destinationPorts:
+  - "4000"
+  protocols:
+  - TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: service-b
+  labels:
+    service.kubernetes.io/service-proxy-name: my-stateless-lb-gateway
+spec:
+  clusterIP: None
+  selector:
+    app: example-target-application-b
+    l-3-4-gateway-api-poc/dummy-service-selector: "true"

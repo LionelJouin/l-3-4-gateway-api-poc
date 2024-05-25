@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	gatewayapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 // +genclient
@@ -199,4 +200,113 @@ type NetworkAttachementAnnotation struct {
 
 	// Value added for the "Key" (e.g.: [{"name":"macvlan-vlan-100","interface":"macvlan-100"}]).
 	Value string `json:"value,omitempty"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// L34Route is a specification for a L34Route resource.
+type L34Route struct {
+	metav1.TypeMeta `json:",inline"`
+	// Standard object's metadata.
+	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
+	// +optional
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	// Specification of the desired behavior of the L34Route.
+	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
+	// +optional
+	Spec L34RouteSpec `json:"spec"`
+
+	// Most recently observed status of the L34Route.
+	// Populated by the system.
+	// Read-only.
+	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
+	// +optional
+	Status L34RouteStatus `json:"status"`
+}
+
+// +enum
+type TransportProtocol string
+
+const (
+	// TCP represents the layer 4 protocol.
+	TCP TransportProtocol = "TCP"
+	// UDP represents the layer 4 protocol.
+	UDP TransportProtocol = "UDP"
+	// SCTP represents the layer 4 protocol.
+	SCTP TransportProtocol = "SCTP"
+)
+
+// L34RouteSpec is the spec for a L34Route resource.
+type L34RouteSpec struct {
+	gatewayapiv1.CommonRouteSpec `json:",inline"`
+
+	// BackendRefs defines the backend(s) where matching requests should be
+	// sent. If unspecified or invalid (refers to a non-existent resource or a
+	// Service with no endpoints), the underlying implementation MUST actively
+	// reject connection attempts to this backend. Connection rejections must
+	// respect weight; if an invalid backend is requested to have 80% of
+	// connections, then 80% of connections must be rejected instead.
+	//
+	// Support: Core for Kubernetes Service
+	//
+	// Support: Extended for Kubernetes ServiceImport
+	//
+	// Support: Implementation-specific for any other resource
+	//
+	// Support for weight: Extended
+	//
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=16
+	BackendRefs []gatewayapiv1.BackendRef `json:"backendRefs,omitempty"`
+
+	// Destination CIDRs that this L34Route will send traffic to.
+	// The destination CIDRs should not have overlaps.
+	//nolint:tagliatelle
+	DestinationCIDRs []string `json:"destinationCIDRs"`
+
+	// Source CIDRs allowed in the L34Route.
+	// The source CIDRs should not have overlaps.
+	//nolint:tagliatelle
+	SourceCIDRs []string `json:"sourceCIDRs,omitempty"`
+
+	// Source port ranges allowed in the L34Route.
+	// The ports should not have overlaps.
+	// Ports can be defined by:
+	// - a single port, such as 3000;
+	// - a port range, such as 3000-4000;
+	// - "any", which is equivalent to port range 0-65535.
+	SourcePorts []string `json:"sourcePorts,omitempty"`
+
+	// Destination port ranges allowed in the L34Route.
+	// The ports should not have overlaps.
+	// Ports can be defined by:
+	// - a single port, such as 3000;
+	// - a port range, such as 3000-4000;
+	// - "any", which is equivalent to port range 0-65535.
+	DestinationPorts []string `json:"destinationPorts,omitempty"`
+
+	// Protocols allowed in this L34Route.
+	// The protocols should not have overlaps.
+	Protocols []TransportProtocol `json:"protocols"`
+
+	// Priority of the L34Route
+	Priority int32 `json:"priority"`
+
+	// ByteMatches matches bytes in the L4 header in the L34Route.
+	// +optional
+	ByteMatches []string `json:"byteMatches,omitempty"`
+}
+
+// L34RouteStatus is the status for a L34Route resource.
+type L34RouteStatus struct{}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// L34RouteList is a list of L34Route resources.
+type L34RouteList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+
+	Items []L34Route `json:"items"`
 }

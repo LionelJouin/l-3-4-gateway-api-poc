@@ -75,7 +75,7 @@ subjects:
 kind: ConfigMap
 apiVersion: v1
 metadata:
-  name: templates-configmap
+  name: kpng-templates-configmap
 data:
   kpng.yaml: |
 {{ tpl (.Files.Get "gateway-templates/kpng.yaml") . | indent 4}}
@@ -154,4 +154,4 @@ spec:
       volumes:
       - name: templates
         configMap:
-          name: templates-configmap
+          name: kpng-templates-configmap

@@ -21,4 +21,11 @@ const (
 	// not find any application pod and then keep the kubernetes endpointslice empty. This selector
 	// will be ignored by the endpointslice controllers of this PoC.
 	LabelDummmySericeSelector = "l-3-4-gateway-api-poc/dummy-service-selector"
+
+	// LabelServiceMaxEndpoints defines the maximum number of endpoints that a
+	// service can handle.
+	LabelServiceMaxEndpoints = "l-3-4-gateway-api-poc/service-max-endpoints"
+
+	// PodSelectedNetworks represents the networks that must be in the pods selected by the services.
+	PodSelectedNetworks = "l-3-4-gateway-api-poc/networks"
 )

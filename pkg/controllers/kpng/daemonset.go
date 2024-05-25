@@ -25,6 +25,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/kubernetes/pkg/proxy/apis"
 	ctrl "sigs.k8s.io/controller-runtime"
 	gatewayapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
@@ -39,9 +40,9 @@ func (c *Controller) reconcileKPNGDaemonSet(
 	ctx context.Context,
 	gateway *gatewayapiv1.Gateway,
 ) error {
-	knpgDaemonSet := &appsv1.DaemonSet{}
+	kpngDaemonSet := &appsv1.DaemonSet{}
 
-	knpgDaemonSetLatestState, err := c.getKPNGDaemonSet(gateway)
+	kpngDaemonSetLatestState, err := c.getKPNGDaemonSet(gateway)
 	if err != nil {
 		return err
 	}
@@ -49,11 +50,11 @@ func (c *Controller) reconcileKPNGDaemonSet(
 	err = c.Get(ctx, types.NamespacedName{
 		Name:      getKPNGDaemonSetName(gateway),
 		Namespace: gateway.Namespace,
-	}, knpgDaemonSet)
+	}, kpngDaemonSet)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			// Create
-			err = c.Create(ctx, knpgDaemonSetLatestState)
+			err = c.Create(ctx, kpngDaemonSetLatestState)
 			if err != nil {
 				return fmt.Errorf("failed to create the kpng daemonset: %w", err)
 			}
@@ -65,7 +66,7 @@ func (c *Controller) reconcileKPNGDaemonSet(
 	}
 
 	// Update
-	err = c.Update(ctx, knpgDaemonSetLatestState)
+	err = c.Update(ctx, kpngDaemonSetLatestState)
 	if err != nil {
 		return fmt.Errorf("failed to update the kpng daemonset: %w", err)
 	}
@@ -124,6 +125,9 @@ func (c *Controller) getKPNGDaemonSet(
 		daemonSet.Annotations[string(key)] = string(value)
 		daemonSet.Spec.Template.Annotations[string(key)] = string(value)
 	}
+
+	daemonSet.Labels[apis.LabelServiceProxyName] = gateway.GetName()
+	daemonSet.Spec.Template.Labels[apis.LabelServiceProxyName] = gateway.GetName()
 
 	for index, container := range daemonSet.Spec.Template.Spec.Containers {
 		switch container.Name {

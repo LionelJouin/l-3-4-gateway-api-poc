@@ -20,7 +20,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/lioneljouin/l-3-4-gateway-api-poc/api/v1alpha1"
+	"github.com/lioneljouin/l-3-4-gateway-api-poc/pkg/endpointslice"
 	"github.com/lioneljouin/l-3-4-gateway-api-poc/pkg/log"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
@@ -33,23 +33,19 @@ import (
 	gatewayapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
-// GetIPs represents the function to get the IPs assigned to a pod
-// for a specific network.
-type GetIPs func(pod v1.Pod, networks []*v1alpha1.Network) ([]string, error)
-
 // Controller reconciles the Gateway Object to run KPNG.
 type Controller struct {
 	client.Client
 	Scheme *runtime.Scheme
 	// GetIPsFunc is used when the endpointSlice will be reconciled to get the IPs
 	// of the pods attached to the service.
-	GetIPsFunc       GetIPs
+	GetIPsFunc       endpointslice.GetIPs
 	GatewayClassName string
 }
 
 // Reconcile implements the reconciliation of the Gateway of KPNG class.
 // This function is trigger by any change (create/update/delete) in any resource related
-// to the object (Flow/Service/Gateway).
+// to the object (Service/Gateway/EndpointSlice/Pod/DaemonSet).
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.13.0/pkg/reconcile
@@ -90,7 +86,7 @@ func (c *Controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 // SetupWithManager sets up the controller with the Manager.
 func (c *Controller) SetupWithManager(mgr ctrl.Manager) error {
 	err := ctrl.NewControllerManagedBy(mgr).
-		For(&gatewayapiv1.Gateway{}). // TODO: objects related + gatewayclass
+		For(&gatewayapiv1.Gateway{}).
 		// With EnqueueRequestsFromMapFunc, on an update the func is called twice
 		// (1 time for old and 1 time for new object)
 		Owns(&appsv1.DaemonSet{}).
@@ -99,7 +95,7 @@ func (c *Controller) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(&v1.Service{}, handler.EnqueueRequestsFromMapFunc(serviceEnqueue)).
 		Complete(c)
 	if err != nil {
-		return fmt.Errorf("failed to build the router manager: %w", err)
+		return fmt.Errorf("failed to build the kpng manager: %w", err)
 	}
 
 	return nil

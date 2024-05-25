@@ -23,7 +23,7 @@ import (
 )
 
 func GetNetworksFromGateway(gateway *gatewayapiv1.Gateway) []*v1alpha1.Network {
-	networkAttachmentAnnotation, exists := gateway.Spec.Infrastructure.Annotations[netdefv1.NetworkAttachmentAnnot]
+	networkAttachmentAnnotation, exists := gateway.Spec.Infrastructure.Annotations[v1alpha1.PodSelectedNetworks]
 	if !exists {
 		return []*v1alpha1.Network{}
 	}

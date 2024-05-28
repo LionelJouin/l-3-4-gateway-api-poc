@@ -1,7 +1,7 @@
 FROM ubuntu:24.04
 
 RUN apt-get update -y --fix-missing\
-  && apt-get install -y iproute2 tcpdump iptables net-tools iputils-ping ipvsadm netcat-traditional wget bird2 ethtool conntrack xz-utils
+  && apt-get install -y iproute2 tcpdump iptables net-tools iputils-ping ipvsadm netcat-traditional wget bird2 ethtool conntrack xz-utils curl
 
 WORKDIR /root/
 

@@ -1,0 +1,116 @@
+---
+apiVersion: "k8s.cni.cncf.io/v1"
+kind: NetworkAttachmentDefinition
+metadata:
+  name: macvlan-nad-3
+spec:
+  config: '{
+        "cniVersion":"0.4.0",
+        "type":"macvlan",
+        "master":"eth0",
+        "mode":"bridge",
+        "ipam":{
+            "log_file":"/tmp/whereabouts.log",
+            "type":"whereabouts",
+            "ipRanges":[
+                {
+                    "range":"169.233.100.0/24"
+                }
+            ]
+        }
+    }'
+---
+apiVersion: "k8s.cni.cncf.io/v1"
+kind: NetworkAttachmentDefinition
+metadata:
+  name: vlan-300
+spec:
+  config: '{
+        "cniVersion":"0.4.0",
+        "type":"vlan",
+        "name":"vlan-300",
+        "master": "eth0",
+        "vlanId": 300,
+        "linkInContainer": false,
+        "ipam":{
+            "log_file":"/tmp/whereabouts.log",
+            "type":"whereabouts",
+            "ipRanges":[
+                {
+                    "range":"169.254.100.0/24",
+                    "exclude":[
+                        "169.254.100.150/32"
+                    ]
+                }
+            ]
+        }
+    }'
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: Gateway
+metadata:
+  name: bookinfo-gateway
+spec:
+  gatewayClassName: istio
+  listeners:
+  - name: http
+    port: 80
+    protocol: HTTP
+    allowedRoutes:
+      namespaces:
+        from: Same
+  infrastructure:
+    annotations: 
+      k8s.v1.cni.cncf.io/networks: '[{"name":"vlan-300","interface":"vlan-300"},{"name":"macvlan-nad-3","interface":"net3"}]' # Networks attached to the gateway workloads
+      l-3-4-gateway-api-poc/networks: '[{"name":"macvlan-nad-3","interface":"net3"}]' # Networks towards the service selected pods
+    labels:
+      l-3-4-gateway-api-poc/kpng-inject: "true"
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: HTTPRoute
+metadata:
+  name: bookinfo
+spec:
+  parentRefs:
+  - name: bookinfo-gateway
+  rules:
+  - matches:
+    - path:
+        type: Exact
+        value: /productpage
+    - path:
+        type: PathPrefix
+        value: /static
+    - path:
+        type: Exact
+        value: /login
+    - path:
+        type: Exact
+        value: /logout
+    - path:
+        type: PathPrefix
+        value: /api/v1/products
+    backendRefs:
+    - name: productpage
+      port: 9080
+---
+apiVersion: l34.gateway.api.poc/v1alpha1
+kind: GatewayRouter
+metadata:
+  name: gateway-c-v4
+  labels:
+    service.kubernetes.io/service-proxy-name: bookinfo-gateway
+spec:
+  address: 169.254.100.150
+  interface: vlan-300
+  bgp:
+    localASN: 8103
+    remoteASN: 4248829953
+    holdTime: 24s
+    localPort: 10179
+    remotePort: 10179
+    bfd:
+      switch: true
+      minTx: 300ms
+      minRx: 300ms
+      multiplier: 5

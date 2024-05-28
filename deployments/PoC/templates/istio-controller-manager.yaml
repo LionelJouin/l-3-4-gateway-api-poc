@@ -1,0 +1,207 @@
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: selfsigned-issuer
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: serving-cert
+spec:
+  dnsNames:
+  - webhook-service.default.svc
+  - webhook-service.default.svc.cluster.local
+  issuerRef:
+    kind: Issuer
+    name: selfsigned-issuer
+  secretName: webhook-server-cert
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: istio-poc-mutating-webhook-configuration
+  annotations:
+    cert-manager.io/inject-ca-from: default/serving-cert
+webhooks:
+- name: mpods.kb.io
+  clientConfig:
+    service:
+      name: webhook-service
+      path: /mutate--v1-pod
+      namespace: default
+  failurePolicy: Fail
+  admissionReviewVersions: ["v1"]
+  rules:
+  - apiGroups:
+    - ""
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    resources:
+    - pods
+  sideEffects: None
+  objectSelector:
+    matchLabels:
+      l-3-4-gateway-api-poc/kpng-inject: "true"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: webhook-service
+spec:
+  ports:
+  - port: 443
+    targetPort: 9443
+  selector:
+    app: istio-controller-manager
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: istio-controller-manager
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: istio-controller-manager
+rules:
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  - daemonsets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - gateway.networking.k8s.io
+  resources:
+  - gateways
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - gateway.networking.k8s.io
+  resources:
+  - gateways/status
+  verbs:
+  - patch
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - services
+  - pods
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - "discovery.k8s.io"
+  resources:
+  - endpointslices
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: istio-controller-manager
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: istio-controller-manager
+subjects:
+- kind: ServiceAccount
+  name: istio-controller-manager
+  namespace: default
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: istio-controller-manager
+  labels:
+    app: istio-controller-manager
+    app.kubernetes.io/part-of: l-3-4-gateway-api-poc
+    app.kubernetes.io/version: {{.Values.version}}
+spec:
+  selector:
+    matchLabels:
+      app: istio-controller-manager
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: istio-controller-manager
+        app.kubernetes.io/part-of: l-3-4-gateway-api-poc
+        app.kubernetes.io/version: {{.Values.version}}
+    spec:
+      serviceAccountName: istio-controller-manager
+      containers:
+      - name: istio-controller-manager
+        image: {{ .Values.registry }}/istio-controller-manager:{{.Values.version}}
+        imagePullPolicy: Always
+        command:
+        - "./istio-controller-manager"
+        args:
+        - "run"
+        - "--gateway-class-name=istio"
+        - "--registry={{.Values.registry}}"
+        - "--version={{.Values.version}}"
+        env:
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - name: webhook-certs
+          mountPath: /tmp/k8s-webhook-server/serving-certs
+          readOnly: true
+        ports:
+        - name: probes
+          containerPort: 8081
+        startupProbe:
+          httpGet:
+            path: /readyz
+            port: probes
+          failureThreshold: 100
+          periodSeconds: 3
+          timeoutSeconds: 2
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: probes
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: probes
+          periodSeconds: 10
+          timeoutSeconds: 2
+        resources:
+          limits:
+            cpu: 300m
+            memory: 30Mi
+            ephemeral-storage: 1024Mi
+          requests:
+            cpu: 100m
+            memory: 20Mi
+            ephemeral-storage: 512Mi
+      volumes:
+      - name: webhook-certs
+        secret:
+          secretName: webhook-server-cert

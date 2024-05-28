@@ -13,7 +13,7 @@ help: ## Display this help.
 # Variables
 ############################################################################
 
-IMAGES ?= kpng-controller-manager router example-target-application vpn-gateway cni-plugins stateless-load-balancer stateless-load-balancer-controller-manager unit-test
+IMAGES ?= kpng-controller-manager router example-target-application vpn-gateway cni-plugins stateless-load-balancer stateless-load-balancer-controller-manager unit-test istio-controller-manager
 VERSION ?= latest
 
 # E2E tests
@@ -94,6 +94,10 @@ stateless-load-balancer: ## Build the stateless-load-balancer.
 .PHONY: stateless-load-balancer-controller-manager
 stateless-load-balancer-controller-manager: ## Build the stateless-load-balancer-controller-manager.
 	IMAGE=stateless-load-balancer-controller-manager $(MAKE) $(BUILD_STEPS)
+
+.PHONY: istio-controller-manager
+istio-controller-manager: ## Build the istio-controller-manager.
+	IMAGE=istio-controller-manager $(MAKE) $(BUILD_STEPS)
 
 .PHONY: unit-test
 unit-test: 

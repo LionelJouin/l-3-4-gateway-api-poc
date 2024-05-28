@@ -120,6 +120,16 @@ func (c *Controller) reconcileEndpointSlice(
 		return fmt.Errorf("failed to reconcile %v EndpointSlice: %w", addressType, err)
 	}
 
+	if c.SetPortsInEndpointSlices {
+		for _, port := range service.Spec.Ports {
+			endpointSlice.Ports = append(endpointSlice.Ports, v1discovery.EndpointPort{
+				Name:     &port.Name,
+				Protocol: &port.Protocol,
+				Port:     &port.Port,
+			})
+		}
+	}
+
 	err = ctrl.SetControllerReference(
 		service,
 		endpointSlice,

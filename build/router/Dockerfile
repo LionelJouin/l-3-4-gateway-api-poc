@@ -17,7 +17,8 @@ RUN CGO_ENABLED=0 GOOS=linux go build -ldflags "-extldflags -static -X github.co
 
 FROM alpine
 
-RUN apk add bird
+RUN apk update && apk add iproute2 tcpdump nftables bird
+
 RUN mkdir -p /run/bird && mkdir -p /etc/bird
 
 COPY --from=build /app/router .

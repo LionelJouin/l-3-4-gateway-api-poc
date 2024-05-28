@@ -39,8 +39,10 @@ type Controller struct {
 	Scheme *runtime.Scheme
 	// GetIPsFunc is used when the endpointSlice will be reconciled to get the IPs
 	// of the pods attached to the service.
-	GetIPsFunc       endpointslice.GetIPs
-	GatewayClassName string
+	GetIPsFunc               endpointslice.GetIPs
+	GatewayClassName         string
+	DisabledDaemonSet        bool
+	SetPortsInEndpointSlices bool
 }
 
 // Reconcile implements the reconciliation of the Gateway of KPNG class.
@@ -66,12 +68,14 @@ func (c *Controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, nil
 	}
 
-	err = c.reconcileKPNGDaemonSet(ctx, gateway)
-	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to reconcile the kpng daemonset: %w", err)
-	}
+	if !c.DisabledDaemonSet {
+		err = c.reconcileKPNGDaemonSet(ctx, gateway)
+		if err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to reconcile the kpng daemonset: %w", err)
+		}
 
-	log.FromContextOrGlobal(ctx).Info("KPNG Daemonset reconciled")
+		log.FromContextOrGlobal(ctx).Info("KPNG Daemonset reconciled")
+	}
 
 	err = c.reconcileServices(ctx, gateway)
 	if err != nil {

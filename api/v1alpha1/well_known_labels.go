@@ -28,4 +28,7 @@ const (
 
 	// PodSelectedNetworks represents the networks that must be in the pods selected by the services.
 	PodSelectedNetworks = "l-3-4-gateway-api-poc/networks"
+
+	// LabelKPNGInject indicates a pod must receive the KPNG and router containers.
+	LabelKPNGInject = "l-3-4-gateway-api-poc/kpng-inject"
 )

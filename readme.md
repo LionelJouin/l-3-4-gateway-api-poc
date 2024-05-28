@@ -4,6 +4,8 @@ This is a PoC (Proof Of Concept) for layer 3 / 4 services using Gateway API (v1.
 
 * [PoC 1: Service as Gateway API Route using KPNG](#poc-1-service-as-gateway-api-route-using-kpng)
 * [PoC 2: A Stateless-LB No NAT (NFQLB) using Layer 3/4 routes](#poc-2-a-stateless-lb-no-nat-nfqlb-using-layer-34-routes)
+* [PoC 3: Istio gateway with a KPNG and a router container as sidecars](#poc-3-istio-gateway-with-a-kpng-and-a-router-container-as-sidecars)
+* [Conclusion](#conclusion)
 
 Controllers must be re-written to be fully functional. They are currently written only to make the demos to work.
 
@@ -30,6 +32,11 @@ kubectl apply -k https://github.com/kubernetes-sigs/gateway-api/config/crd/exper
 Install Multus:
 ```
 helm install multus ./deployments/Multus --set registry=ghcr.io/lioneljouin/l-3-4-gateway-api-poc
+```
+
+Install cert-manager
+```
+kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.14.5/cert-manager.yaml
 ```
 
 Install Gateways/Routers/Traffic-Generators (`docker compose down` to uninstall. Change manually the image in `docker-compose.yaml` if you built your own):
@@ -81,7 +88,7 @@ docker exec -it vpn-a mconnect -address 20.0.0.1:4000 -nconn 400 -timeout 2s
 
 Configuration: [examples/stateless-load-balancer-gateway-api.yaml](examples/stateless-load-balancer-gateway-api.yaml)
 
-Install the example kpng Gateway/GatewayRouter/Service:
+Install the example stateless-load-balancer Gateway/GatewayRouter/Service:
 ```
 kubectl apply -f examples/stateless-load-balancer-gateway-api.yaml
 ```
@@ -121,3 +128,42 @@ docker exec -it vpn-b mconnect -address 40.0.0.1:4000 -nconn 400 -timeout 2s
 
 ![service-stateless-load-balancer](docs/resources/service-stateless-load-balancer.png)
 
+## PoC 3: Istio gateway with a KPNG and a router container as sidecars
+
+https://istio.io/latest/docs/setup/additional-setup/getting-started/
+
+Install istioctl
+```
+curl -sL https://istio.io/downloadIstioctl | sh -
+```
+
+Install istio
+```
+istioctl install -f examples/istio/demo-profile-no-gateways.yaml -y
+kubectl label namespace default istio-injection=enabled
+```
+
+Install istio gateway/Route
+```
+kubectl apply -f examples/istio/bookinfo-gateway.yaml
+```
+
+Install istio demo application
+```
+kubectl apply -f examples/istio/bookinfo.yaml
+```
+
+Run traffic
+```
+docker exec -it vpn-c curl 20.0.0.1/productpage
+```
+
+### How does it work?
+
+It works in the same way as PoC 1 with istio router running in front of KPNG. The service type load-balancer created by Istio when creating the Gateway is not in use here. Instead, as in PoC 1, the external IPs of the service served in the KPNG is advertised via BGP.
+
+![service-istio](docs/resources/service-istio.png)
+
+### Conclusion 
+
+TBD

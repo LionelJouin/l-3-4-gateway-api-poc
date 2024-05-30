@@ -7,6 +7,8 @@ This is a PoC (Proof Of Concept) for layer 3 / 4 services using Gateway API (v1.
 * [PoC 3: Istio gateway with a KPNG and a router container as sidecars](#poc-3-istio-gateway-with-a-kpng-and-a-router-container-as-sidecars)
 * [Conclusion](#conclusion)
 
+Slides: https://docs.google.com/presentation/d/188FLos5DgZ0G8oy6B6unTkGYjKdc-Vd5CE9UpPYt1Wk/edit?usp=sharing
+
 Controllers must be re-written to be fully functional. They are currently written only to make the demos to work.
 
 ### Build
@@ -166,4 +168,23 @@ It works in the same way as PoC 1 with istio router running in front of KPNG. Th
 
 ### Conclusion 
 
-TBD
+1. What is the future of services? ([Lightning Talk: Why Service Is the Worst API in Kubernetes, & What We’re Doing About It - Tim Hockin](https://www.youtube.com/watch?v=Oslwx3hj2Eg))
+    - Does the service API will be only for Service Discovery + Load-Balancing?
+    - Does the Gateway Class represent generic service types? (ClusterIP, LoadBalancer, ...)
+    - Does the routes represent the service specification (service IP, Ports, …)
+    - Is a gateway a service-proxy?
+2. Custom EndpointSlice Controller would be required (A KEP could be opened)
+    - https://github.com/kubernetes/kubernetes/issues/87412
+3. Do we need new Routes for Layer 3 / 4?
+    - What about TCPRoute / UDPRoute? (e.g.: [Blixt](https://github.com/kubernetes-sigs/blixt))
+    - Are Gateway API Routes only steering traffic towards service or LoadBalancerRoute should exist? 
+4. Is the Load-Balancing part of the Gateway?
+5. These PoCs are about Ingress traffic (traffic coming from outside of the Kubernetes cluster). What about internal / East-West traffic?
+6. What are Gateway API Listeners?
+    - How does it fit in Layer 3/4? 
+    - How to have all ports listener?
+        - https://github.com/kubernetes-sigs/gateway-api/pull/130
+        - https://github.com/kubernetes-sigs/gateway-api/pull/780#discussion_r693210917
+        - https://github.com/kubernetes-sigs/gateway-api/issues/818
+        - https://github.com/kubernetes-sigs/gateway-api/issues/1061
+        - https://docs.google.com/document/d/1NN-IDoN-mIxtv6f7JR_G9kK1kKbZHMqQPcUSy6tPDbA/edit

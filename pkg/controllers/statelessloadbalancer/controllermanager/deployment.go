@@ -65,11 +65,11 @@ func (c *Controller) reconcileStatelessLoadBalancerDeployment(
 		return fmt.Errorf("failed to get the stateless-load-balancer deployment: %w", err)
 	}
 
-	// Update
-	err = c.Update(ctx, knpgDeploymentLatestState)
-	if err != nil {
-		return fmt.Errorf("failed to update the stateless-load-balancer deployment: %w", err)
-	}
+	// Update: TODO
+	// err = c.Update(ctx, knpgDeploymentLatestState)
+	// if err != nil {
+	// 	return fmt.Errorf("failed to update the stateless-load-balancer deployment: %w", err)
+	// }
 
 	return nil
 }

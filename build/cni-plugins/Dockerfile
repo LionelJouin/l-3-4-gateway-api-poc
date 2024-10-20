@@ -18,7 +18,7 @@ FROM golang:1.22 as cni-plugin-build
 
 WORKDIR /app
 
-ENV CNI_VERSION=v1.4.0
+ENV CNI_VERSION=v1.5.1
 
 ADD https://api.github.com/repos/containernetworking/plugins/git/refs/tags/${CNI_VERSION} version.json
 
